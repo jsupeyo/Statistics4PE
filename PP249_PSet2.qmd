@@ -1,0 +1,242 @@
+---
+title: "PP249_PSet2"
+author: "James Supeyo Kibiro"
+format: 
+  html:
+    embed-resources: true
+editor: visual
+---
+
+Libraries
+
+```{r}
+library(tidyverse)
+library(sandwich)
+library(lmtest)
+```
+
+# Question 2
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+You are given cleaned data from the Tennessee Star Experiment, which aims to address the impact of class size on student outcomes. Your task is to do the following, in either R or Stata (please be sure to share your code!):
+
+1.  Load in the dataset, which is stored on bCourses as “TN_STAR_reduced.csv.”
+
+```{r}
+#load the dataset
+read.csv("TN_STAR_reduced.csv") ->star_data
+view(star_data)
+head(star_data)
+```
+
+2.  Conduct summary statistics as requested in 2.1.
+
+    ![](images/Screenshot%202024-09-16%20at%203.19.46%20AM.png)
+
+```{r}
+# Control group summary statistics
+# n
+n_control <- 
+  star_data |> 
+  filter(treat==0) |> 
+  count()
+
+# mimimum
+minimum_value_control <- min(star_data$math_score[star_data$treat==0])
+
+# mean
+mean_value_control <- mean(star_data$math_score[star_data$treat==0])
+
+# standard deviation
+sd_value_control <- sd(star_data$math_score[star_data$treat==0])
+
+# maximum value
+maximum_value_control <- max(star_data$math_score[star_data$treat==0])
+
+print(n_control)
+print(minimum_value_control)
+print(mean_value_control)
+print(sd_value_control)
+print(maximum_value_control)
+```
+
+```{r}
+# Treatment group summary statistics
+
+#n
+n_treat <-
+  star_data |> 
+  filter(treat==1) |> 
+  count()
+
+# minimum
+minimum_value_treat <- min(star_data$math_score[star_data$treat==1])
+
+# mean
+mean_value_treat <- mean(star_data$math_score[star_data$treat==1])
+
+# standard_deviation
+sd_value_treat <- sd(star_data$math_score[star_data$treat==1])
+
+# maximum value
+maximum_value_treat <- max(star_data$math_score[star_data$treat==1])
+
+print(n_treat)
+print(minimum_value_treat)
+print(mean_value_treat)
+print(sd_value_treat)
+print(maximum_value_treat)
+```
+
+2.2 Conduct the regression with robust standard errors (using “math_score” as the outcome and “treat” as the predictor).
+
+```{r}
+# Regression model
+
+regression_model <- 
+  lm(math_score ~ treat, data = star_data)
+
+regression_model
+
+# Robust standard errors
+
+robust_covariance <- vcovHC(regression_model, type = "HC3") #robust covariance..."HC3" is usually a good default choice
+head(robust_covariance)
+
+# Robust standard errors
+robust_sd_errors <- coeftest(regression_model, vcov=robust_covariance)
+robust_sd_errors
+```
+
+Please answer the following:
+
+2.2.1 What is control group mean?
+
+```{r}
+control_group_mean <- mean(star_data$math_score[star_data$treat==0], na.rm = TRUE)
+control_group_mean
+```
+
+2.2.2 What is the treatment group mean?
+
+```{r}
+treatment_group_mean <- mean(star_data$math_score[star_data$treat==1], na.rm = TRUE)
+treatment_group_mean
+```
+
+2.2.3 What is the estimated treatment effect?
+
+```{r}
+summary(regression_model)
+```
+
+Estimated Treatment Effect: **0.17980**
+
+2.2.4 What is the estimated standard error on the treatment effect? **0.02926** What is the “t statistic”? **8.51e-10**
+
+2.2.5 Is the impact of treat on “math_score” statistically significant at the .05 level? **Yes**.
+
+2.3 Conduct a two-sample t-test for the difference in means between the treatment group and the control group.
+
+```{r}
+t_test_result <- t.test(math_score ~ treat, data = star_data)
+t_test_result
+```
+
+2.3.1 What is the t statistic? **-6.008** Does this differ from your answer to Question 2.2? **No.**
+
+2.4 Consider the case where we double the sample size. Holding all else equal, we would see the following:
+
+-   Standard Error: Increase, Decrease, or Stay the Same?
+
+**The standard error will decrease because it is inversely proportional to the square root of the sample size. Specifically it will decrease a factor of √2.**
+
+-   t-statistic: Increase, Decrease, or Stay the Same?
+
+**The t-statistic increases because the standard error decreases.**
+
+-   p-value: Increase, Decrease, or Stay the Same?
+
+**The p-value will decrease because larger t-statistic values are less likely under the null hypothesis which infers the observed difference in means is more likely significant.**
+
+# Question 3
+
+You are given cleaned data from the Gerber and Green experiment on the effects of canvassing, direct mail, and phone calls on voter turnout. Your task is to do the following, in either R or Stata (please be sure to share your code!):
+
+3.1) Load in the dataset, which is stored on bCourses as “Gerber_APSR_Reduced.csv”
+
+```{r}
+read.csv("Gerber_APSR_Reduced.csv") ->gerber_data
+head(gerber_data)
+```
+
+3.2) Conduct a regression with robust standard errors, where “vote” is the outcome and our only predictor variable is “treat”
+
+```{r}
+# regression model
+regression_model_gerber <- lm(vote ~ treat, data = gerber_data)
+regression_model_gerber
+
+# Robust standard errors
+
+robust_covariance_gerber <- vcovHC(regression_model_gerber, type = "HC3") #robust covariance..."HC3" is usually a good default choice
+head(robust_covariance_gerber)
+
+# Robust standard errors
+robust_sd_errors_gerber <- coeftest(regression_model_gerber, vcov=robust_covariance_gerber)
+robust_sd_errors_gerber
+```
+
+Answer the questions below!
+
+3.1.1 What is control group mean?
+
+```{r}
+gerber_control_group_mean <- mean(gerber_data$vote[gerber_data$treat==0], na.rm=TRUE)
+gerber_control_group_mean
+```
+
+3.1.2 What is the treatment group mean?
+
+```{r}
+gerber_treatment_group_mean <- mean(gerber_data$vote[gerber_data$treat==1], na.rm = TRUE)
+gerber_treatment_group_mean
+```
+
+3.1.3 What is the estimated treatment effect?
+
+```{r}
+summary(regression_model_gerber)
+```
+
+Estimated Treatment Effect: **0.081310**
+
+3.1.4 What is the estimated standard error on the treatment effect? **0.002587**
+
+3.1.5 What is the “t statistic”? **31.43** Is the impact of “treat” on “vote” statistically significant at the .05 level? **Yes**
+
+3.2 Conduct a two-sample t-test for the difference in means between the treatment group and the control group.
+
+```{r}
+t_test_result_gerber <- t.test(vote ~ treat, data = gerber_data)
+t_test_result_gerber
+```
+
+What is the t statistic? **30.287** Does this differ from your answer to Question 3.1? **No**.
+
+Question 3.3 Consider the case where we double the sample size. Holding all else equal, we would see the following:
+
+-   Standard Error: Increase, Decrease, or Stay the Same?
+
+**The standard error will decrease because it is inversely proportional to the square root of the sample size. Specifically it will decrease a factor of √2.**
+
+-   t-statistic: Increase, Decrease, or Stay the Same?
+
+**The t-statistic increases because the standard error decreases.**
+
+-   p-value: Increase, Decrease, or Stay the Same?
+
+**The p-value will decrease because larger t-statistic values are less likely under the null hypothesis which infers the observed difference in means is more likely significant.**
+
+The End.

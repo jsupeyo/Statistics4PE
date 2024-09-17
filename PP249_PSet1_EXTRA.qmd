@@ -1,0 +1,202 @@
+---
+title: 'PP249: Problem Set 1 (Extra Credit)'
+author: "James Supeyo Kibiro"
+date: "Aug. 30, 2024"
+format: 
+  html:
+    embed-resources: true
+---
+
+# Revisiting gift cards
+
+This problem set will use simulation to explore the likely outcomes of the gift card experiment from the main part of problem set #1. The goal of this extra credit problem set is to gain comfort with simulation-based methods and to start to build intuition for statistical power.
+
+## Technical aside: setting a randomization seed
+
+Like all statistical packages, *R* does not generate truly random numbers. Instead, it generates **Pseudo-Random Numbers**, which take a "seed" value and then create a number that's as good as random (if you're curious, look up the ["Mersenne Twister"](https://en.wikipedia.org/wiki/Mersenne_Twister)). It's good statistical practice to set a seed whenever you're generating random variables so that you can recreate your results later.
+
+```{r}
+
+# Set the seed
+set.seed(8675309)
+
+# Generate 1 random standard Uniform variable
+runif(1, min = 0, max = 1) 
+```
+
+If you set your seed to `8675309`, the random number should be `0.1594836`. Did you get that?
+
+**Yes? No?**
+
+**Yes.**
+
+## Giving away some gift cards
+
+Let's start by loading some libraries. *NB:* `message: false` and `warning: false` tell R not to print all the (messy) output that goes along with loading. You can shut these off to see what happens.
+
+```{r}
+#| message: false
+#| warning: false
+library(tidyverse)
+library(estimatr)
+```
+
+Here's a function that runs one gift card experiment. Notice that it takes in four arguments: `success_prob_control`, `success_prob_treat`, `N`, and `treat_prob`. The listed values are defaults --- so if you leave these values unspecified, then `R` automatically uses these defaults.
+
+```{r}
+# This function runs one gift card experiment
+run_one_experiment <- function(success_prob_control = 0.65,
+                               success_prob_treat = 0.80,
+                               N = 100,
+                               treat_prob = 0.50){
+  
+  # Generate potential outcomes
+  Y0 <- rbinom(N, size = 1, prob = success_prob_control)
+  Y1 <- rbinom(N, size = 1, prob = success_prob_treat)
+  
+  # Generate treatment assignment
+  Z <- rbinom(N, size = 1, prob = treat_prob)
+  Z_bar <- mean(Z)
+  
+  # Generate observed outcomes
+  Yobs <- ifelse(Z, Y1, Y0)
+  
+  # Generate gift card data frame
+  gift_card_data <- tibble(Y = Yobs, Z = Z) 
+  
+  # Estimate effect
+  gift_card_lm <- lm_robust(Y ~ Z, data = gift_card_data) |> tidy()
+  
+  
+  # Return output
+  return(c(Z_bar = Z_bar,
+         gift_card_lm |> filter(term == "Z") |> select(estimate, std.error, p.value))
+  )
+  
+}
+
+```
+
+Let's try it out once
+
+```{r}
+run_one_experiment(success_prob_control = 0.65,
+                   success_prob_treat = 0.80,
+                   N = 100,
+                   treat_prob = 0.50)
+```
+
+## Question 1
+
+Now set the seed to your birthday (in `MMDDYYY` format). What is the treated share in your experiment? What do you estimate the treatment effect to be? (*NB:* This will be different from other students’ answers, unless two of you have the same birthday.)
+
+```{r}
+set.seed(05041994)
+run_one_experiment(success_prob_control = 0.65,
+                   success_prob_treat = 0.80,
+                   N = 100,
+                   treat_prob = 0.50)
+```
+
+------------------------------------------------------------------------
+
+Run many experiments
+
+```{r}
+run_many_experiments <- function(num_experiments = 1000,
+                                 success_prob_control = 0.65,
+                                 success_prob_treat = 0.80,
+                                 N = 100,
+                                 treat_prob = 0.50){
+  
+  
+  replicate(num_experiments, 
+                    unlist(run_one_experiment(success_prob_control = success_prob_control,
+                                       success_prob_treat = success_prob_treat,
+                                       N = N,
+                                       treat_prob = treat_prob))) |> 
+          t() |>
+          as_tibble()
+}
+
+```
+
+```{r}
+my_experiments <- run_many_experiments(num_experiments = 1000,
+                                       success_prob_control = 0.65,
+                                       success_prob_treat = 0.80,
+                                       N = 100,
+                                       treat_prob = 0.50)
+```
+
+```{r}
+ggplot(my_experiments, aes(x = Z_bar)) + geom_histogram() + theme_bw() + 
+  labs(x = "Proportion Treated")
+
+```
+
+Across the 1,000 simulated experiments, about 50% receive gift cards on average, as intended.
+
+```{r}
+my_experiments |> summarize(mean(Z_bar))
+```
+
+And the proportion of simulated experiments where 50% or more receive gift cards isn't *so* far from 0.50.
+
+```{r}
+my_experiments |> summarize(mean(Z_bar >= 0.50))
+```
+
+## Question 2
+
+Across the 1,000 simulated experiments, in how many would I bust my budget by giving away more than 55 gift cards?
+
+```{r}
+my_experiments |> summarise(mean(Z_bar >=0.55))
+```
+
+## Question 3
+
+In what fraction of the experiments do I estimate that giving out gift cards *increases* textbook purchases?
+
+```{r}
+
+```
+
+## Question 4
+
+In what fraction of the experiments do I estimate a *statistically significant* positive effect of gift cards on textbook purchases? (for $\alpha < 0.05$)
+
+```{r}
+
+```
+
+## Question 5
+
+Now suppose that I get an infusion of cash and double the size of my experiment, to $N = 200$. Modify the code to simulate this experiment. How do your answers to Q2 and Q3 change? Specifically, in what fraction of the experiments do you estimate a positive impact? In what fraction do you estimate a positive *and statistically significant* impact?
+
+```{r}
+# I COPY AND PASTED THESE LINES FROM ABOVE --- MODIFY THEM, PLEASE
+my_experiments_q5 <- run_many_experiments(num_experiments = 1000,
+                                       success_prob_control = 0.65,
+                                       success_prob_treat = 0.80,
+                                       N = 100, 
+                                       treat_prob = 0.50)
+
+# Add more code here
+```
+
+## Question 6
+
+After recruiting all $N = 200$ students into my new study, I realize I made an egregious accounting mistake and still only have enough funding for 50 gift cards (in expectation). Modify the code to simulate this new experiment. How do your answers to Q5 change? Specifically, in what fraction of the experiments do you estimate a positive impact? In what fraction do you estimate a positive *and statistically significant* impact? (*Hint:* What's the new probability of receiving a gift card?)
+
+```{r}
+# I COPY AND PASTED THESE LINES FROM ABOVE --- MODIFY THEM, PLEASE
+my_experiments_q6 <- run_many_experiments(num_experiments = 1000,
+                                       success_prob_control = 0.65,
+                                       success_prob_treat = 0.80,
+                                       N = 100, 
+                                       treat_prob = 0.50)
+
+# Add more code here
+```
