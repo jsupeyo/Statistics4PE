@@ -13,6 +13,7 @@ Libraries
 library(tidyverse)
 library(sandwich)
 library(lmtest)
+library(estimatr)
 ```
 
 # Question 2
@@ -26,7 +27,6 @@ You are given cleaned data from the Tennessee Star Experiment, which aims to add
 ```{r}
 #load the dataset
 read.csv("TN_STAR_reduced.csv") ->star_data
-view(star_data)
 head(star_data)
 ```
 
@@ -35,7 +35,7 @@ head(star_data)
     ![](images/Screenshot%202024-09-16%20at%203.19.46%20AM.png)
 
 ```{r}
-# Control group summary statistics
+# Summary statistics for Control Group
 # n
 n_control <- 
   star_data |> 
@@ -101,8 +101,8 @@ regression_model
 
 # Robust standard errors
 
-robust_covariance <- vcovHC(regression_model, type = "HC3") #robust covariance..."HC3" is usually a good default choice
-head(robust_covariance)
+robust_covariance <- vcovHC(regression_model, type = "HC1") #robust covariance..."HC1" is usually a good default choice
+robust_covariance
 
 # Robust standard errors
 robust_sd_errors <- coeftest(regression_model, vcov=robust_covariance)
@@ -133,7 +133,7 @@ summary(regression_model)
 
 Estimated Treatment Effect: **0.17980**
 
-2.2.4 What is the estimated standard error on the treatment effect? **0.02926** What is the “t statistic”? **8.51e-10**
+2.2.4 What is the estimated standard error on the treatment effect? **0.02926** What is the “t statistic”? **6.145**
 
 2.2.5 Is the impact of treat on “math_score” statistically significant at the .05 level? **Yes**.
 
@@ -144,7 +144,7 @@ t_test_result <- t.test(math_score ~ treat, data = star_data)
 t_test_result
 ```
 
-2.3.1 What is the t statistic? **-6.008** Does this differ from your answer to Question 2.2? **No.**
+2.3.1 What is the t statistic? **-6.008** Does this differ from your answer to Question 2.2? **No, it's the relatively close to the negative value of the answer to question 2.2. i.e, 6.145**
 
 2.4 Consider the case where we double the sample size. Holding all else equal, we would see the following:
 
@@ -180,8 +180,8 @@ regression_model_gerber
 
 # Robust standard errors
 
-robust_covariance_gerber <- vcovHC(regression_model_gerber, type = "HC3") #robust covariance..."HC3" is usually a good default choice
-head(robust_covariance_gerber)
+robust_covariance_gerber <- vcovHC(regression_model_gerber, type = "HC1") #robust covariance..."HC1" is usually a good default choice
+robust_covariance_gerber
 
 # Robust standard errors
 robust_sd_errors_gerber <- coeftest(regression_model_gerber, vcov=robust_covariance_gerber)
@@ -214,7 +214,7 @@ Estimated Treatment Effect: **0.081310**
 
 3.1.4 What is the estimated standard error on the treatment effect? **0.002587**
 
-3.1.5 What is the “t statistic”? **31.43** Is the impact of “treat” on “vote” statistically significant at the .05 level? **Yes**
+3.1.5 What is the “t statistic”? **31.43** Is the impact of “treat” on “vote” statistically significant at the .05 level? **Yes, our P value is 2e-16.**
 
 3.2 Conduct a two-sample t-test for the difference in means between the treatment group and the control group.
 
@@ -223,7 +223,7 @@ t_test_result_gerber <- t.test(vote ~ treat, data = gerber_data)
 t_test_result_gerber
 ```
 
-What is the t statistic? **30.287** Does this differ from your answer to Question 3.1? **No**.
+What is the t statistic? -**30.207** Does this differ from your answer to Question 3.1? **No**, **it is relatively close to the negative value of the answer to question 3.1. i.e., 31.43**
 
 Question 3.3 Consider the case where we double the sample size. Holding all else equal, we would see the following:
 

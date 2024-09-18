@@ -1,0 +1,200 @@
+---
+title: 'Problem Set 2: Extra Credit'
+author: "James Supeyo Kibiro"
+date: "September 6, 2024"
+format: 
+  html:
+    embed-resources: true
+---
+
+# Using regression to analyze TN STAR
+
+In the main problem set, you partly worked through the famous Tennessee STAR study, which looked at the effect of smaller class size on student achievement. Here we'll explore a bit more about the data set and look at subgroup variation.
+
+First, let's load some useful packages.
+
+```{r}
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(skimr) # Tidy summary statistics table 
+library(estimatr) # For "lm_robust"
+```
+
+##### Load in data set
+
+Download the data set from bcourses and make sure that it's in the same directory as your `Rmd` file.
+
+Now let's load the data set into `R`.
+
+```{r}
+load("TN_STAR_for_PS2_Bonus.RData")
+```
+
+Let's make sure that we loaded it right.
+
+```{r}
+star |> glimpse()
+```
+
+```{r}
+star |> skim()
+```
+
+So far so good. We've greatly simplified the data set here: `boy` and `white` are the relevant indicators for self-reported gender and race; `free_lunch` is an indicator for free or reduced-price lunch status, which is generally available for low-income students; `treat` is the indicator for random assignment to treatment.
+
+Our outcome variables of interest are standardized test scores at the end of Kindergarten in math and reading: `std_math_score_k` and `std_read_score_k`.
+
+### Visualize your data
+
+Here is a boxplot of the overall distribution of `std_math_score_k` in our study sample.
+
+```{r}
+ggplot(star, aes(y = std_math_score_k)) + 
+  geom_boxplot() +
+  labs(y = "Standardized math score in Kindergarten")
+```
+
+#### Question (a)
+
+Plot the distribution of test scores separately for white vs. non-white students. (You're welcome to stick with a boxplot, but you're also welcome to change!)
+
+```{r}
+ggplot(star, aes(x = white, y = std_math_score_k, fill = white))+
+  geom_boxplot()+
+  labs(title = "Distribution of Math Test Scores by Race",
+       x= "Student Race",
+       y= "Standard Math Score",
+       fill="Student Race")+
+  scale_fill_manual(values = c("0"="lightblue","1"="pink"),
+                    labels = c("Non-White Students", "White Students"))+
+  theme_minimal()
+```
+
+#### Question (b)
+
+Plot the distribution of test scores separately by treatment status. Is there any (visual) evidence of an effect on math score?
+
+```{r}
+ggplot(star, aes(x = treat, y = std_math_score_k, fill = treat))+
+  geom_boxplot()+
+  labs(title = "Distribution of Math Test Scores by Treatment",
+       x= "Treatment Status",
+       y= "Standard Math Score",
+       fill="Treatment")+
+  scale_fill_manual(values = c("0"="orange","1"="turquoise"),
+                    labels = c("Control Group", "Treatment Group"))+
+  theme_minimal()
+```
+
+#### Question (c)
+
+Plot the distribution of test scores separately by treatment status *and* race. What can you say?
+
+```{r}
+ggplot(star, aes( x = treat, y = std_math_score_k, fill = white))+
+  geom_boxplot()+
+  labs(title = "Distribution of Test Scores by Student Race and Treatment Status",
+         x= "Treatment Status",
+       y = "Standard Math Scores",
+       fill="Student Race")+
+  scale_fill_manual(values = c("0" = "lightblue", "1" = "pink"),
+                    labels = c("Non-White Students", "White Students"))+
+  theme_minimal()
+```
+
+### Estimate impacts
+
+#### Question (d)
+
+Replicating your answer from Question 2 in the main problem set, use regression to estimate the impact of being assigned to a small class on students' end-of-kindergarten math scores (in SD units).
+
+```{r}
+lm_robust(std_math_score_k ~ treat, data = star)
+```
+
+#### Question (e)
+
+Estimate the impact of small class size separately by `white`. Does the impact appear larger for one group? Which one?
+
+```{r}
+# Regression for White students
+
+white_students_regression <- lm_robust(std_math_score_k ~ 1, data = star[star$white == 1,])
+
+# Regression for Non-White students
+
+non_white_students_regression <- lm_robust(std_math_score_k ~ 1, data = star[star$white == 0,])
+
+white_students_regression
+
+non_white_students_regression
+```
+
+**Yes, the impact is larger for white students.**
+
+#### Question (f)
+
+Check your intuition from Question (e) by fitting a linear regression with an interaction by `white`. What does this tell you about treatment effect variation by white / non-white?
+
+```{r}
+model_interaction <- lm(std_math_score_k ~ 1 * white, data = star)
+
+summary(model_interaction)
+```
+
+**Our P-Value is high i.e., 0.728 which implies the intercept is not statistically significant and therefore we cannot say with confidence that there is a difference in the test scores between the race groups.**
+
+#### Question (g)
+
+As we discussed in class, it's often a good idea to adjust for pre-treatment covariates when estimating the treatment effect in a randomized trial. Re-estimate the effect of treatment on standardized kindergarten math score, adjusting for the available pre-treatment covariates. How much smaller is the standard error compared to the unadjusted version? (*Hint:* Careful about which variables in the data set are pre-treatment!)
+
+```{r}
+# Identify pretreatment covariates: boy (gender), white (race)
+
+# Fit a linear regression model that includes the treatment variable and these covariates.
+
+unadjusted_model <- lm_robust(std_math_score_k ~ 1, data = star)
+
+summary(unadjusted_model)
+
+# Extract the standard error for the treatment effect (class_size = small = 1)
+
+unadjusted_se <- summary(unadjusted_model)$coefficients[1, "Std. Error"]
+
+print(unadjusted_se)
+```
+
+```{r}
+# Fit the Adjusted Model (With Pre-Treatment Covariates)
+
+# adjusted_model <- lm(std_math_score ~ class_size + race + gender + parent_education, data = star)
+
+adjusted_model <- lm_robust(std_math_score_k ~ 1 + 1 + 1 , data = star)
+
+summary(adjusted_model)
+
+# Extract the standard error for the treatment effect (class_size)
+
+adjusted_se <- summary(adjusted_model)$coefficients[1, "Std. Error"]
+
+print(adjusted_se)
+```
+
+```{r}
+# Let's compare the standard errors
+
+reduction_in_se <- unadjusted_se - adjusted_se
+
+reduction_in_se
+
+percentage_reduction <- (reduction_in_se / unadjusted_se) * 100
+
+print(percentage_reduction)
+
+cat("Unadjusted Standard Error:", unadjusted_se, "\n")
+cat("Adjusted Standard Error:", adjusted_se, "\n")
+cat("Reduction in Standard Error:", reduction_in_se, "\n")
+cat("Percentage Reduction in SE:", percentage_reduction, "%\n")
+```
