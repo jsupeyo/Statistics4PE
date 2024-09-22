@@ -1,0 +1,33 @@
+---
+title: "PP249 PSet 3"
+author: "James Supeyo Kibiro"
+format: html
+editor: visual
+---
+
+```{r}
+# Load libraries
+
+library(tidyverse)
+library(estimatr)
+library(ggplot2)
+```
+
+## Section 1: Regression / Covariate Conceptual Review
+
+Setup: You work at the United Nations (UN) and have a dataset from a randomized controlled\
+trial (RCT) ascertaining whether giving people free condoms for the entirety of their adolescence\
+reduces STI rates measured when they turn 18. Participants were individuals living in rural parts\
+of Free State (a province in South Africa). The dataset includes 10 variables. Y is a binary\
+outcome (has an STI at age 18), T is a treatment indicator (given free condoms by the UN\
+throughout adolescence), and X1 – X8 are a series of covariates that ostensibly predict STI\
+rates. X1 is a factor variable (the village the individual lives in) and X2 through X8 are\
+continuous. The dataset is called “data” in R.
+
+1.  What would you type in R to find the proportion of individuals assigned to\
+    treatment? Why would that information be helpful? What’s an advantage of setting\
+    this proportion to 50%?
+
+```{r}
+
+```
