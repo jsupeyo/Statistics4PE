@@ -1,0 +1,172 @@
+---
+title: 'Problem Set 3: Extra Credit'
+author: "James Supeyo Kibiro"
+date: "September 16, 2024"
+format: 
+  html:
+    embed-resources: true
+---
+
+# Analyzing a large cluster-randomized trial of masks to stop COVID-19 in Bangladesh
+
+This extra credit problem set will re-analyze a famous cluster-randomized trial that seeks to assess the impact of (encouraging) mask wearing on COVID-19 transmission in Bangladesh; the paper is [here](https://www.science.org/doi/10.1126/science.abi9069). The original experiment is quite involved. To streamline this problem set, we will focus on a subset of the original experiment (Wave 7) and ignore some of the complications in the actual randomization (especially matched pairs and variation in the treatment itself).
+
+First, let's load some useful packages.
+
+```{r}
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(skimr) # Tidy summary statistics table 
+library(estimatr) # For "lm_robust"
+```
+
+### Load in data set
+
+Download the data set from bcourses and make sure that it's in the same directory as your `Rmd` file.
+
+Now let's load the data set into `R`.
+
+```{r}
+load("Bangladesh_RCT_subset.RData")
+```
+
+Let's make sure that we loaded it right.
+
+```{r}
+dat |> glimpse()
+```
+
+```{r}
+dat |> skim()
+```
+
+Some variable definitions:
+
+-   `posXsymp` is the binary outcome of interest, which denotes whether a person is symptomatic and tests positive for COVID-19
+-   `treatment` is the binary indicator for whether the person's village was encouraged to wear a masks
+-   `union` is a numeric string denoting the village; this is the unit of randomization
+-   `above_50` is an indicator for whether the person is older than 50 years old
+-   `female` is an indicator for whether the person identifies as female
+
+### Basic data checks
+
+Before we dive in, let's look at a few key metrics.
+
+#### Sample size
+
+How many people are in our data set? How many villages (`union`)? How many people are in each village?
+
+```{r}
+# Number of people in our data set
+dat |> 
+  count() ->total_sample # Number of people in our data set
+
+
+# Number of villages
+
+dat |> 
+  group_by(union) |> 
+  summarize(count = n()) |> 
+  ungroup() |> 
+  nrow()->num_villages
+
+
+
+# Number of people in each village
+
+dat |> 
+  group_by(union) |> 
+  summarise(num_people = n()) |> 
+  ungroup()->village_population
+
+print(village_population)
+print(num_villages)
+print(total_sample)
+```
+
+#### Treatment
+
+What proportion of people are assigned to treatment? What about villages?
+
+```{r}
+# What proportion of people are assigned to treatment? 
+
+individual_treatment_proportions <- dat |> 
+  count(treatment) |> # Count the number of people in each treatment group (0 or 1)
+  mutate(proportion = n/sum(n)) # Calculate the proportion of each group
+
+#What about villages?
+
+village_treatment_proportions <- dat |> 
+  group_by(union) |> # Group the data by village
+  count(treatment) |> # Count the number of people in each treatment group within each village
+  mutate(proportion = n/sum(n)) |> # Calculate the proportion of people in each treatment group within each village
+  ungroup() # Ungroup the data after the operation
+
+# Results
+print(individual_treatment_proportions)
+print(village_treatment_proportions)
+```
+
+#### Outcome
+
+What is the average positivity rate?
+
+```{r}
+# What is the average positivity rate?
+avg_positivity_rate <-
+ dat |> 
+  group_by(treatment) |> 
+  summarize(mean_outcome = mean(posXsymp)) |> # For each group (treatment or control),  calculate the mean outcome
+  summarize(average_positivity_rate = diff(mean_outcome))  # Calculate the difference in means (treatment - control)
+
+print(avg_positivity_rate)
+```
+
+Without doing any additional calculations, what do you conclude about the resulting standard error for an outcome like this?
+
+**The negative positivity rate of -0.004 (0.4%) shows the treatment group had a lower average positivity rate than the control group.**
+
+What are the unadjusted ("raw") means for the treatment groups?
+
+```{r}
+unadjusted_means <- dat |> 
+  group_by(treatment) |> 
+  summarize(mean_outcome = mean(posXsymp, na.rm = TRUE))  # Calculate the mean outcome for each treatment group
+
+unadjusted_means
+```
+
+### Using regression
+
+Use the `lm_robust` function to compute the estimated treatment effect and corresponding standard error appropriately adjusting for clustering (but without any additional covariate adjustment).
+
+```{r}
+reg_model <- lm_robust(posXsymp ~ treatment, data = dat, clusters = union)
+
+summary(reg_model)
+```
+
+Now compute the "naive" regression that does not appropriately account for clustering. What is different? Does this look like you expect?
+
+```{r}
+naive_reg_model <- lm_robust(posXsymp ~ treatment, data = dat)
+
+summary(naive_reg_model)
+```
+
+What is different? **The standard error is smaller compared to the clustered model.**
+
+Does this look like you expect? **Yes, the standard error is usually bigger in clustered models as the model accounts for the correlation within clusters leading to a more accurate representation of the uncertainty around the treatment effect.**
+
+Finally, extend the regression that accounts for clustering to also adjust for individual-level covariates. How does the standard error change?
+
+```{r}
+model_with_covariates <- lm_robust(posXsymp ~ treatment + above_50 + female, data = dat, clusters = union)
+
+summary(model_with_covariates)
+```
+
+How does the standard error change? **The standard error reduces compared to the clustered model without covariates from 0.001486 to 0.001303 for the intercept and from 0.001675 to 0.001674 for the treatment.**
