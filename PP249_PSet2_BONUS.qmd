@@ -121,11 +121,11 @@ Estimate the impact of small class size separately by `white`. Does the impact a
 ```{r}
 # Regression for White students
 
-white_students_regression <- lm_robust(std_math_score_k ~ 1, data = star[star$white == 1,])
+white_students_regression <- lm_robust(std_math_score_k ~ treat, data = star[star$white == 1,])
 
 # Regression for Non-White students
 
-non_white_students_regression <- lm_robust(std_math_score_k ~ 1, data = star[star$white == 0,])
+non_white_students_regression <- lm_robust(std_math_score_k ~ treat, data = star[star$white == 0,])
 
 white_students_regression
 
@@ -139,7 +139,7 @@ non_white_students_regression
 Check your intuition from Question (e) by fitting a linear regression with an interaction by `white`. What does this tell you about treatment effect variation by white / non-white?
 
 ```{r}
-model_interaction <- lm(std_math_score_k ~ 1 * white, data = star)
+model_interaction <- lm(std_math_score_k ~ treat * white, data = star)
 
 summary(model_interaction)
 ```
@@ -155,7 +155,7 @@ As we discussed in class, it's often a good idea to adjust for pre-treatment cov
 
 # Fit a linear regression model that includes the treatment variable and these covariates.
 
-unadjusted_model <- lm_robust(std_math_score_k ~ 1, data = star)
+unadjusted_model <- lm_robust(std_math_score_k ~ treat, data = star)
 
 summary(unadjusted_model)
 
@@ -171,7 +171,7 @@ print(unadjusted_se)
 
 # adjusted_model <- lm(std_math_score ~ class_size + race + gender + parent_education, data = star)
 
-adjusted_model <- lm_robust(std_math_score_k ~ 1 + 1 + 1 , data = star)
+adjusted_model <- lm_robust(std_math_score_k ~ treat + 1 + 1 , data = star)
 
 summary(adjusted_model)
 
