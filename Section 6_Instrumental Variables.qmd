@@ -1,0 +1,84 @@
+---
+title: "Section 6"
+author: "James Supeyo Kibiro"
+format: html
+editor: visual
+---
+
+## Section 6: Sesame Street Example
+
+```{r}
+#Load the libraries
+library(estimatr)
+library(tidyr)
+library(dplyr)
+library(lmtest)
+library(AER)
+```
+
+```{r}
+
+read.csv("Sesame.csv") ->sesame # Load the data
+
+sesame$site <- factor(sesame$site) # Here 'site' is the blocking variable, meaning
+# that people were assigned to the treatment or control within a site.
+# don't worry about this too much for now, but this means we need to control
+# for the variable site in any regressions we run!
+```
+
+```{r}
+### Breaking our sample into groups based on T (encouraged to watch) and D (actually watched)
+# who is in each group?
+
+sesame |> 
+  count(encouraged, watched)
+```
+
+```{r}
+# how do compliers differ from never-takers in the group assigned to treatment?
+sesame  |>  
+  filter(encouraged == 1)  |> 
+  group_by(watched) |> 
+  summarise(
+    mean_prelet = mean(prelet, na.rm = TRUE),
+    mean_age = mean(age, na.rm = TRUE),
+    share_male = mean(male, na.rm = TRUE)
+  )
+```
+
+```{r}
+##### Compute the Wald ratio 
+# first stage
+first_stage <- lm_robust(watched ~ site + encouraged, data = sesame)
+
+tidy(first_stage) |> 
+  select(-c(df, outcome))
+```
+
+```{r}
+# ITT
+itt <- lm_robust(postlet ~ site + encouraged, data = sesame)
+
+tidy(itt) |> 
+  select(-c(df, outcome))
+```
+
+```{r}
+3.41/0.348 # Our wald ratio is given by the ITT/(share compliers)
+```
+
+```{r}
+##### By hand
+Dhat <- predict(lm(watched ~ site + encouraged, data = sesame))
+
+lm_robust(postlet ~ site + Dhat, data = sesame)
+```
+
+```{r}
+##### 2SLS using the IV commands 
+  # type ? iv_robust to learn what you need to input to these commands! here's
+  # one of the examples of the command: 
+  # Instrument for treatment `D` with encouragement `Z`: tidy(iv_robust(Y ~ D + X | Z + X, data = dat))
+tidy(iv_robust(postlet ~ site  + watched | site  + encouraged, data = sesame)) |> 
+  select(-c(df, outcome))
+```
