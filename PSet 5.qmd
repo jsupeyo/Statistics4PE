@@ -1,0 +1,49 @@
+---
+title: "PSet 5_Q4"
+author: "James Supeyo Kibiro"
+format: html
+editor: visual
+---
+
+## Q5: 
+
+### a)Estimate the ITT and Standard Error
+
+```{r}
+# Libraries
+library(readxl) # For reading excel files
+library(ivreg) # For 2SLS regression
+library(tidyverse) # For data manupilation
+```
+
+```{r}
+getwd() # Confirm the working directory
+
+file_path <- file.choose() #select the file to work on
+
+data <- read_excel(file_path) # Load the file into the IDE
+
+head(data) # Inspect the data to confirm it is loaded correctly
+```
+
+```{r}
+# Estimate the ITT and the Standard error
+
+itt_model <- lm(y ~ t, data = data) # Estimate the ITT effect using linear regression
+
+summary(itt_model)
+
+```
+
+Therefore, our ITT estimate is **0.12** and our SE is **0.0308**
+
+### b) Estimate the LATE and it's Standard Error
+
+```{r}
+
+late_model <- ivreg(y ~ d | t, data = data) #2SLS estimation of LATE using the ivreg package
+
+summary(late_model)
+```
+
+Therefore, our LATE IS **0.1846**, and the SE is **0.0478**.
